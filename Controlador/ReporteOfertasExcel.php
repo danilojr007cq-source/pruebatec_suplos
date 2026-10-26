@@ -1,11 +1,11 @@
 <?php
 // Archivo: Controlador/ReporteOfertasExcel.php
-// Propósito: armar y descargar el reporte en Excel (.xlsx) del listado de ofertas.
-// Se genera con PHP nativo y la extensión ZipArchive, sin librerías externas.
+// Proposito: armar y descargar el reporte en Excel del listado de ofertas
+// Se genera con PHP nativo y la extensión ZipArchive, sin librerias externas
 
 class ReporteOfertasExcel
 {
-    // Genera el archivo y lo envía al navegador como descarga.
+    // Genera el archivo y lo envia al navegador como descarga.
     public static function descargar($ofertas)
     {
         $ruta = self::crearArchivo($ofertas);
@@ -136,7 +136,7 @@ class ReporteOfertasExcel
         return $xml;
     }
 
-    // Escribe una celda con texto en línea (así no hace falta sharedStrings).
+    // Escribe una celda con texto en linea
     private static function celda($referencia, $valor, $estilo)
     {
         return '<c r="' . $referencia . '" s="' . $estilo . '" t="inlineStr">'
@@ -144,7 +144,7 @@ class ReporteOfertasExcel
             . '</c>';
     }
 
-    // Escapa el texto para XML y quita caracteres de control no permitidos.
+    // Escapa el texto para XML y quita caracteres de control no permitidos
     private static function escapar($valor)
     {
         $texto = (string) $valor;
@@ -157,7 +157,7 @@ class ReporteOfertasExcel
         return htmlspecialchars($limpio, ENT_QUOTES | ENT_XML1, 'UTF-8');
     }
 
-    // Muestra el presupuesto tal como aparece en el listado: "COP 15.000.000,00".
+    // Muestra el presupuesto tal como aparece en el listado
     private static function formatearPresupuesto($oferta)
     {
         if ($oferta->presupuesto === null || $oferta->presupuesto === '') {
@@ -170,7 +170,7 @@ class ReporteOfertasExcel
         return trim($moneda . ' ' . $valor);
     }
 
-    // Fecha en el mismo formato del listado: dd/mm/aaaa.
+    // Fecha en el mismo formato del listado: dd/mm/aaaa
     private static function formatearFecha($fecha)
     {
         if (empty($fecha)) {
@@ -182,7 +182,7 @@ class ReporteOfertasExcel
         return $timestamp ? date('d/m/Y', $timestamp) : (string) $fecha;
     }
 
-    // Partes fijas del paquete XLSX.
+    // Partes fijas del paquete XLSX
     private static function contenidoTipos()
     {
         return <<<'XML'

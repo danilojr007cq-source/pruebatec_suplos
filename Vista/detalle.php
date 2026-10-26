@@ -6,6 +6,8 @@
 
 include __DIR__ . '/partials/encabezado.php';
 
+$mensaje = isset($_GET['mensaje']) && is_string($_GET['mensaje']) ? $_GET['mensaje'] : '';
+
 // Escapa un valor para mostrarlo en HTML
 $e = function ($valor) {
     return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
@@ -14,12 +16,23 @@ $e = function ($valor) {
 // Clase Bootstrap para el badge del estado
 $claseEstado = function ($estado) {
     $clases = array(
-        'ACTIVA' => 'success',
-        'CERRADA' => 'secondary',
-        'BORRADOR' => 'warning text-dark'
+        'ACTIVO' => 'success',
+        'PUBLICADA' => 'primary',
+        'EN_EVALUACION' => 'warning text-dark'
     );
 
     return $clases[$estado] ?? 'light text-dark';
+};
+
+// Texto amigable del estado
+$etiquetaEstado = function ($estado) {
+    $etiquetas = array(
+        'ACTIVO' => 'Activo',
+        'PUBLICADA' => 'Publicada',
+        'EN_EVALUACION' => 'En evaluación'
+    );
+
+    return $etiquetas[$estado] ?? (string) $estado;
 };
 
 // Une código y nombre de una categoría de la actividad
@@ -74,6 +87,13 @@ if ($oferta->fecha_inicio && $oferta->hora_inicio && $oferta->fecha_cierre && $o
 }
 ?>
 
+<?php if ($mensaje === 'noeditable'): ?>
+    <div class="alert alert-warning">
+        Esta oferta ya no está en estado <strong>Activo</strong>, así que no se puede editar.
+        Solo las ofertas activas admiten cambios.
+    </div>
+<?php endif; ?>
+
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
         <p class="text-muted mb-1">Detalle de la licitación</p>
@@ -81,14 +101,16 @@ if ($oferta->fecha_inicio && $oferta->hora_inicio && $oferta->fecha_cierre && $o
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="font-monospace text-muted"><?= $e($oferta->consecutivo) ?></span>
             <?php if ($oferta->estado): ?>
-                <span class="badge bg-<?= $claseEstado($oferta->estado) ?>"><?= $e($oferta->estado) ?></span>
+                <span class="badge bg-<?= $claseEstado($oferta->estado) ?>"><?= $e($etiquetaEstado($oferta->estado)) ?></span>
             <?php endif; ?>
         </div>
     </div>
 
     <div class="d-flex flex-wrap gap-2">
         <a href="index.php?accion=listar" class="btn btn-outline-secondary">Volver al listado</a>
-        <a href="index.php?accion=editar&id=<?= (int) $oferta->id ?>" class="btn btn-warning">Editar oferta</a>
+        <?php if ($oferta->estado === 'ACTIVO'): ?>
+            <a href="index.php?accion=editar&id=<?= (int) $oferta->id ?>" class="btn btn-warning">Editar oferta</a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -205,7 +227,7 @@ if ($oferta->fecha_inicio && $oferta->hora_inicio && $oferta->fecha_cierre && $o
             <dt class="col-sm-3">Estado</dt>
             <dd class="col-sm-9">
                 <?php if ($oferta->estado): ?>
-                    <span class="badge bg-<?= $claseEstado($oferta->estado) ?>"><?= $e($oferta->estado) ?></span>
+                    <span class="badge bg-<?= $claseEstado($oferta->estado) ?>"><?= $e($etiquetaEstado($oferta->estado)) ?></span>
                 <?php else: ?>
                     —
                 <?php endif; ?>
@@ -373,7 +395,7 @@ if ($oferta->fecha_inicio && $oferta->hora_inicio && $oferta->fecha_cierre && $o
             <dt class="col-sm-3">Estado actual</dt>
             <dd class="col-sm-9">
                 <?php if ($oferta->estado): ?>
-                    <span class="badge bg-<?= $claseEstado($oferta->estado) ?>"><?= $e($oferta->estado) ?></span>
+                    <span class="badge bg-<?= $claseEstado($oferta->estado) ?>"><?= $e($etiquetaEstado($oferta->estado)) ?></span>
                 <?php else: ?>
                     —
                 <?php endif; ?>

@@ -16,13 +16,6 @@ Se implementó:
 - Vista de detalle con pestañas: General, Actividad, Cronograma, Documentos y Auditoría.
 - Validación completa en el servidor y respuestas JSON con códigos HTTP adecuados.
 
-No se implementó:
-
-- Autenticación de usuarios.
-- Protección CSRF.
-- Carga o eliminación de documentos desde la interfaz.
-- Acción de eliminar en el listado.
-
 ## 2. Archivos del módulo
 
 | Archivo | Función |
@@ -56,7 +49,7 @@ La tabla `ofertas` tiene las siguientes columnas:
 | `hora_inicio` | TIME | Campo `hora_inicio`; se guarda como `HH:MM:SS`. |
 | `fecha_cierre` | DATE | Campo `fecha_cierre`. |
 | `hora_cierre` | TIME | Campo `hora_cierre`; se guarda como `HH:MM:SS`. |
-| `estado` | VARCHAR(20) | Campo `estado`: BORRADOR, ACTIVA o CERRADA. |
+| `estado` | VARCHAR(20) | Campo `estado`: ACTIVO, PUBLICADA o EN_EVALUACION. |
 | `creado_en` | DATETIME | Se asigna automáticamente al crear. |
 | `actualizado_en` | DATETIME | Se actualiza en cada modificación. |
 
@@ -123,7 +116,7 @@ El formulario usa Vue.js 3 con la API de composición. Las reglas son:
 | `actividad` | Obligatoria; debe seleccionarse de la lista. |
 | `fecha_inicio` / `hora_inicio` | Obligatorias y válidas. |
 | `fecha_cierre` / `hora_cierre` | Obligatorias y posteriores al inicio. |
-| `estado` | Obligatorio; BORRADOR, ACTIVA o CERRADA. |
+| `estado` | Obligatorio; ACTIVO, PUBLICADA o EN_EVALUACION. |
 
 Los errores se muestran debajo de cada campo con las clases `is-invalid` e `invalid-feedback` de Bootstrap. Además, se muestra una alerta general cuando el formulario no es válido.
 
@@ -231,16 +224,46 @@ setTimeout(() => {
 }, 4000);
 ```
 
+### 4.8 Ciclo de vida del estado
+
+El campo **Estado** quedó en el apartado **Información básica** del formulario y solo se muestra en las vistas de crear, editar y detalle. En el listado sigue oculto, tal como estaba.
+
+Los valores que se guardan en la base son estos:
+
+| Valor en base | Se muestra como | Cuándo se usa |
+|---|---|---|
+| `ACTIVO` | Activo | Estado inicial al crear la oferta. Es el único estado que permite editar. |
+| `PUBLICADA` | Publicada | Se asigna automáticamente cuando llega la fecha y hora de inicio. |
+| `EN_EVALUACION` | En evaluación | Se asigna automáticamente cuando llega la fecha y hora de cierre. |
+
+Reglas que se aplicaron:
+
+- El estado es obligatorio en el formulario y también en el servidor.
+- Los dos endpoints AJAX (`guardar_oferta` y `actualizar_oferta`) validan con `in_array()` que el valor sea exactamente uno de los tres permitidos. Cualquier otro valor responde `422` con el error en el campo `estado`.
+- `estado` se agregó al `$fillable` del modelo `Ofertas`, que antes no lo tenía. Por eso ahora sí se guarda al crear y se modifica al actualizar.
+- Solo se pueden editar ofertas en estado `ACTIVO`. Si se intenta abrir el formulario de una oferta publicada o en evaluación, el controlador redirige al detalle con el mensaje `noeditable`. Si alguien intenta forzar el guardado por AJAX, recibe `403` con el mensaje **“Solo se pueden editar ofertas con estado Activo.”**
+- En el detalle, el botón **Editar oferta** solo aparece cuando la oferta está activa y el estado se muestra con su etiqueta amigable.
+
+Los cambios automáticos no dependen de un cron: se revisan cada vez que se entra al listado, al detalle, al formulario de edición, al exportar el Excel o después de crear/actualizar una oferta. La lógica está en `Ofertas::actualizarEstadosAutomaticos()` y hace esto:
+
+1. Convierte estados viejos: `BORRADOR` y `ACTIVA` pasan a `ACTIVO`; `CERRADA` pasa a `EN_EVALUACION`; los registros sin estado también arrancan como `ACTIVO`.
+2. Si una oferta sigue `ACTIVO` y ya llegó su fecha de inicio pero todavía no cierra, pasa a `PUBLICADA`.
+3. Si está `ACTIVO` o `PUBLICADA` y ya llegó la fecha de cierre, pasa a `EN_EVALUACION`.
+
+Cuando el cambio es automático también se actualiza `actualizado_en`, para que quede rastro en la pestaña de auditoría.
+
 ## 5. Edición por AJAX
 
 La edición reutiliza `Vista/partials/formulario_oferta.php`.
 
 1. El listado o el detalle enlazan a `index.php?accion=editar&id=ID`.
-2. `OfertasControlador::editar()` carga la oferta con su actividad y prepara `$datosIniciales`.
-3. El formulario muestra el consecutivo como dato informativo y precarga todos los campos.
-4. Al enviar, se usa el mismo `fetch` contra `index.php?accion=actualizar_oferta`.
-5. El servidor valida, actualiza `actualizado_en` y responde `200`.
-6. Se muestra la alerta y se redirige a `index.php?accion=listar&mensaje=actualizado` después de 4 segundos.
+2. `OfertasControlador::editar()` actualiza primero los estados automáticos y verifica que la oferta siga en `ACTIVO`. Si no, redirige al detalle con `mensaje=noeditable`.
+3. `OfertasControlador::editar()` carga la oferta con su actividad y prepara `$datosIniciales`.
+4. El formulario muestra el consecutivo como dato informativo y precarga todos los campos, incluido el estado.
+5. Al enviar, se usa el mismo `fetch` contra `index.php?accion=actualizar_oferta`.
+6. El servidor vuelve a verificar el estado antes de guardar; si la oferta ya no está activa, responde `403`.
+7. Si todo está bien, valida, actualiza `actualizado_en` y responde `200`.
+8. Se muestra la alerta y se redirige a `index.php?accion=listar&mensaje=actualizado` después de 4 segundos.
 
 El `consecutivo` no se actualiza durante la edición. El ID se envía en un campo oculto.
 
@@ -259,10 +282,11 @@ El listado muestra:
 - Actividad (producto y código).
 - Fecha y hora de inicio.
 - Fecha y hora de cierre.
-- Estado.
 - Fecha de creación.
 - Fecha de actualización.
 - Acciones: **Editar** y **Detalle**.
+
+El estado no se muestra en el listado; solo aparece en crear, editar y detalle.
 
 ### 6.2 Filtros por columna
 
@@ -275,7 +299,6 @@ La fila de filtros está dentro del formulario GET del listado. Parámetros disp
 | `objeto` | Texto | Búsqueda parcial con `LIKE`. |
 | `descripcion` | Texto | Búsqueda parcial con `LIKE`. |
 | `moneda` | COP/USD/EUR | Igualdad. |
-| `estado` | BORRADOR/ACTIVA/CERRADA | Igualdad. |
 | `actividad` | Texto | Búsqueda parcial en `actividades.producto`. |
 | `presupuesto_min` | Número | Presupuesto mayor o igual. |
 | `presupuesto_max` | Número | Presupuesto menor o igual. |
@@ -335,7 +358,9 @@ La vista `Vista/detalle.php` se carga con `index.php?accion=detalle&id=ID` y usa
 - Descripción completa.
 - Moneda.
 - Presupuesto.
-- Estado.
+- Estado, con su etiqueta y color: **Activo**, **Publicada** o **En evaluación**.
+
+El botón **Editar oferta** solo se muestra si el estado es `ACTIVO`. Si una oferta deja de estar activa y alguien entra a la fuerza a la URL de edición, el sistema lo devuelve al detalle con una alerta.
 
 ### Pestaña Actividad
 
@@ -417,15 +442,20 @@ El control de respuestas fuera de orden evita que una búsqueda lenta sobrescrib
    - Completar objeto y descripción.
    - Seleccionar moneda y presupuesto.
    - Buscar una actividad con al menos 2 caracteres y seleccionarla.
-   - Elegir fechas, horas y estado.
+   - Elegir fechas y horas. El estado inicia en **Activo** y también se puede cambiar desde el select.
    - Guardar.
 4. Verificar la alerta de éxito y esperar la redirección al listado.
-5. En el listado, probar filtros por consecutivo, moneda, estado, actividad, presupuesto y fechas.
+5. En el listado, probar filtros por consecutivo, moneda, actividad, presupuesto y fechas.
 6. Con filtros puestos, pulsar **Exportar Excel** y confirmar que el archivo trae todos los resultados, no solo los de la página actual.
 7. Cambiar el tamaño de página y navegar entre páginas.
-8. Usar **Editar** para modificar la oferta y comprobar la actualización por AJAX.
-9. Usar **Detalle** y recorrer las pestañas General, Actividad, Cronograma, Documentos y Auditoría.
+8. Usar **Editar** para modificar una oferta activa y comprobar la actualización por AJAX.
+9. Usar **Detalle** y recorrer las pestañas General, Actividad, Cronograma, Documentos y Auditoría. Confirmar que el estado se ve con su etiqueta.
 10. Probar un envío inválido (por ejemplo, fechas invertidas) y comprobar los mensajes por campo.
+11. Probar el tema del estado:
+    - Enviar un `estado` inventado por AJAX y confirmar que responde `422`.
+    - Crear una oferta con fecha de inicio futura y verificar que queda **Activo** y se puede editar.
+    - Poner una fecha de inicio ya cumplida y recargar el listado o el detalle: debe pasar a **Publicada** y el botón de editar debe desaparecer.
+    - Poner una fecha de cierre ya cumplida: debe pasar a **En evaluación** y el intento de edición debe responder `403` o redirigir al detalle con la alerta.
 
 ## 11. Pruebas realizadas
 
@@ -437,7 +467,7 @@ El control de respuestas fuera de orden evita que una búsqueda lenta sobrescrib
 | Validación con datos inválidos | HTTP 422 con errores por campo. |
 | Actualización AJAX | HTTP 200 y datos actualizados en la base de datos. |
 | GET a `guardar_oferta` | HTTP 405. |
-| Filtros combinados | Resultado correcto por moneda, estado, actividad, presupuesto y fechas. |
+| Filtros combinados | Resultado correcto por moneda, actividad, presupuesto y fechas. |
 | Paginación con 12 registros | Página 1: 10 registros; página 2: 2 registros. |
 | Detalle con actividad y sin documentos | Render correcto y estado vacío de documentos. |
 | Autocompletado `q=Gatos` | Respuesta JSON con ID, producto, código y clase. |
@@ -459,7 +489,8 @@ Los registros temporales usados en las pruebas se eliminaron al finalizar.
 ## 13. Resumen
 
 - La creación y edición de ofertas se hacen por AJAX con `fetch` y respuestas JSON.
-- El servidor valida todos los campos y genera el consecutivo.
+- El servidor valida todos los campos, incluido el estado, y genera el consecutivo.
+- El estado de la oferta avanza solo según las fechas: Activo, Publicada y En evaluación. Solo las activas se pueden editar.
 - El listado muestra todos los campos, permite filtrar por columna y pagina en el servidor.
 - El botón **Exportar Excel** descarga todo el resultado filtrado en un `.xlsx` generado en el backend con PHP nativo.
 - Cada oferta tiene una vista de detalle con pestañas que consolida actividad, cronograma, documentos y auditoría.

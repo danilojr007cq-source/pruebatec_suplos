@@ -117,6 +117,23 @@ $textoBoton = $esEdicion ? 'Actualizar oferta' : 'Guardar oferta';
                                 </div>
                             </div>
                         </div>
+                        <!-- campo estado --->
+                        <div class="row g-3">
+                                <label for="estado" class="form-label">Estado <span class="text-danger">*</span></label>
+                                <select
+                                    id="estado"
+                                    name="estado"
+                                    class="form-select"
+                                    :class="{ 'is-invalid': errores.estado }"
+                                    v-model="form.estado"
+                                    @change="limpiarError('estado')"
+                                >
+                                    <option value="ACTIVO">Activo</option>
+                                    <option value="PUBLICADA">Publicada</option>
+                                    <option value="EN_EVALUACION">En evaluación</option>
+                                </select>
+                                <div v-if="errores.estado" class="invalid-feedback">{{ errores.estado }}</div>
+                        </div>
                         <!-- campo actividad --->
                         <div class="mb-3">
                             <br>

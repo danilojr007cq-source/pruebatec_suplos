@@ -1,15 +1,14 @@
 <?php
 // Archivo: Modelo/Ofertas.php
-// Propósito: Modelo Eloquent para la tabla 'ofertas' (licitaciones).
-// Incluye relación con la actividad (UNSPSC), documentos y consultas para
-// el listado con filtros y paginación.
+// Proposito: Modelo Eloquent para la tabla ofertas
+// Incluye relacion con la actividad, documentos y consultas para el listado con filtros y paginacion.
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../Config/Conexion.php';
 require_once __DIR__ . '/Actividad.php';
 require_once __DIR__ . '/OfertaDocumento.php';
 
-Conexion::iniciar(); // Inicializa la conexión de Eloquent
+Conexion::iniciar(); // Inicializa la conexion de Eloquent
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -21,7 +20,7 @@ class Ofertas extends Model
     // Clave primaria
     protected $primaryKey = 'id';
 
-    // La tabla maneja creado_en / actualizado_en manualmente, no timestamps de Eloquent
+    // La tabla fechas operadas manualmente, no timestamps de Eloquent
     public $timestamps = false;
 
     // Campos asignables de forma masiva
@@ -36,17 +35,23 @@ class Ofertas extends Model
         'hora_inicio',
         'fecha_cierre',
         'hora_cierre',
+        'estado',
         'creado_en',
         'actualizado_en'
     ];
 
-    // Relación: una oferta pertenece a una actividad
+    // Estados disponibles del ciclo de vida de una oferta
+    const ESTADO_ACTIVO = 'ACTIVO';
+    const ESTADO_PUBLICADA = 'PUBLICADA';
+    const ESTADO_EN_EVALUACION = 'EN_EVALUACION';
+
+    // Relacion: una oferta pertenece a una actividad
     public function actividad()
     {
         return $this->belongsTo(Actividad::class, 'actividad_id', 'id');
     }
 
-    // Relación: una oferta puede tener varios documentos
+    // Relacion: una oferta puede tener varios documentos
     public function documentos()
     {
         return $this->hasMany(OfertaDocumento::class, 'licitacion_id', 'id');
@@ -109,6 +114,38 @@ class Ofertas extends Model
             return $oferta->delete();
         }
         return false;
+    }
+
+    // Avanza automaticamente el estado de las ofertas segun sus fechas.
+    // - Activo -> Publicada cuando ya llego la fecha y hora de inicio.
+    // - Activo/Publicada -> En evaluacion cuando ya llego la fecha y hora de cierre.
+    // Tambien convierte los estados antiguos (BORRADOR, ACTIVA y CERRADA) al nuevo esquema.
+    public static function actualizarEstadosAutomaticos()
+    {
+        $ahora = date('Y-m-d H:i:s');
+
+        // Compatibilidad con los estados usados antes de este cambio
+        self::whereNull('estado')->update(array('estado' => self::ESTADO_ACTIVO));
+        self::where('estado', 'BORRADOR')->update(array('estado' => self::ESTADO_ACTIVO));
+        self::where('estado', 'ACTIVA')->update(array('estado' => self::ESTADO_ACTIVO));
+        self::where('estado', 'CERRADA')->update(array('estado' => self::ESTADO_EN_EVALUACION));
+
+        // Una oferta activa pasa a publicada al cumplirse la fecha de inicio
+        self::where('estado', self::ESTADO_ACTIVO)
+            ->whereRaw("CONCAT(fecha_inicio, ' ', hora_inicio) <= ?", array($ahora))
+            ->whereRaw("CONCAT(fecha_cierre, ' ', hora_cierre) > ?", array($ahora))
+            ->update(array(
+                'estado' => self::ESTADO_PUBLICADA,
+                'actualizado_en' => $ahora
+            ));
+
+        // Al llegar la fecha de cierre la oferta queda en evaluacion
+        self::whereIn('estado', array(self::ESTADO_ACTIVO, self::ESTADO_PUBLICADA))
+            ->whereRaw("CONCAT(fecha_cierre, ' ', hora_cierre) <= ?", array($ahora))
+            ->update(array(
+                'estado' => self::ESTADO_EN_EVALUACION,
+                'actualizado_en' => $ahora
+            ));
     }
 
     // Genera un consecutivo único para la oferta, por ejemplo: OF-20261026-A1B2C3

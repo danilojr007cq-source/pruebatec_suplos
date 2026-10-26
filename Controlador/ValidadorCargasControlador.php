@@ -1,7 +1,7 @@
 <?php
 // Archivo: Controlador/ValidadorCargasControlador.php
 // Proposito: Controlador para la carga en la tabla de actividades
-// Toma el archivo CSV de la raiz del proyecto (csv_suplos_temp.csv), valida, procesa e inserta los datos en la tabla actividades usando el modelo Actividad.
+// Toma el archivo CSV de la raiz del proyecto (csv_suplos_temp.csv), valida, procesa e inserta los datos en la tabla actividades usando el modelo Actividad
 
 require_once __DIR__ . '/../Modelo/Actividad.php'; // Carga el modelo Actividad
 
@@ -29,19 +29,19 @@ class ValidadorCargasControlador
         include __DIR__ . '/../Vista/validador_cargas.php';
     }
 
-    // Método para buscar actividades en formato JSON.
-    // Recibe ?q=texto, filtra con LIKE y devuelve como máximo 15 resultados.
-    // Se usa para el autocompletado del campo "actividad" de la vista de crear oferta.
+    // Metodo para buscar actividades en formato JSON.
+    // Recibe ?q=texto, filtra con LIKE y devuelve como máximo 15 resultados
+    // Se usa para el autocompletado del campo "actividad" de la vista de crear oferta
     public function listarActividades()
     {
         header('Content-Type: application/json; charset=utf-8');
         header('Cache-Control: no-store');
 
-        // Término de búsqueda enviado por el autocompletado
+        // Termino de bsqueda enviado por el autocompletado
         $q = trim(isset($_GET['q']) ? (string) $_GET['q'] : '');
-        $limite = 15; // Máximo de resultados para no saturar la vista
+        $limite = 15; // Maximo de resultados para no saturar la vista
 
-        // Si no hay término de búsqueda, no se consulta la base de datos
+        // Si no hay termino de busqueda, no se consulta la base de datos
         if ($q === '') {
             echo json_encode(array(
                 'success' => true,
@@ -77,14 +77,13 @@ class ValidadorCargasControlador
         }
     }
 
-    // Método para procesar el archivo CSV
-    // Responde en formato NDJSON (una linea JSON por evento) para reportar el progreso real de la insercion mientras se ejecuta.
+    // Metodo para procesar el archivo CSV, responde en formato NDJSON (una linea JSON por evento) para reportar el progreso real de la insercion mientras se ejecuta
     public function procesar()
     {
-        // Desactiva la limitación de tiempo de ejecución para archivos grandes
+        // Desactiva la limitacióon de tiempo de ejecucion para archivos grandes
         set_time_limit(0);
 
-        // Desactiva la compresion/salida en buffer para enviar el progreso en tiempo real
+        // Desactiva la salida en buffer para enviar el progreso en tiempo real
         while (ob_get_level()) {
             @ob_end_clean();
         }
@@ -92,7 +91,7 @@ class ValidadorCargasControlador
         ini_set('display_errors', 0);
         header('Content-Type: application/x-ndjson; charset=utf-8'); //este header nos ayuda a que se pueda procesar evento por evento
         header('Cache-Control: no-cache, must-revalidate'); // este evita que el navegador reutilicen una respuesta anterior de este proceso
-        header('X-Accel-Buffering: no'); // Evita el buffering en Nginx si aplica
+        header('X-Accel-Buffering: no'); // Evita el buffering en Nginx
 
         // Verifica nuevamente si ya existen registros para no volver a cargar los datos
         try {
@@ -120,7 +119,7 @@ class ValidadorCargasControlador
             return;
         }
 
-        // Valida que el archivo exista en la raíz del proyecto y que se pueda leer
+        // Valida que el archivo exista en la raiz del proyecto y que se pueda leer
         if (!is_file($this->rutaCsv) || !is_readable($this->rutaCsv)) {
             $this->emitir(array(
                 'tipo' => 'fin',
@@ -134,7 +133,7 @@ class ValidadorCargasControlador
         $lineas = array();
         if (($handle = fopen($this->rutaCsv, 'r')) !== FALSE) {
             while (($data = fgetcsv($handle, 0, ';')) !== FALSE) {
-                // Omite líneas vacías
+                // Omite lineas vacias
                 $tieneDatos = false;
                 foreach ($data as $valor) {
                     if (trim($valor) !== '') {
@@ -157,7 +156,7 @@ class ValidadorCargasControlador
             return;
         }
 
-        // Si el archivo está vacío
+        // Si el archivo esta vacio
         if (count($lineas) == 0) {
             $this->emitir(array(
                 'tipo' => 'fin',
@@ -227,7 +226,7 @@ class ValidadorCargasControlador
 
         try {
             set_time_limit(0);
-            // Inserción masiva por chunks, reportando el progreso después de cada uno
+            // Insercion masiva por pedazos, reportando el progreso despues de cada uno
             $chunks = array_chunk($datosInsertar, 1000);
             $insertados = 0;
 
@@ -262,7 +261,7 @@ class ValidadorCargasControlador
         }
     }
 
-    // Envía un evento JSON en una línea y fuerza el envío inmediato al navegador
+    // Envia un evento JSON en una linea y fuerza el envio inmediato al navegador
     private function emitir($datos)
     {
         echo json_encode($datos, JSON_UNESCAPED_UNICODE) . "\n";

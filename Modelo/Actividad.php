@@ -1,12 +1,11 @@
 <?php
 // Archivo: Modelo/Actividad.php
-// Propósito: Modelo Eloquent para la tabla 'actividades' usando el mismo patrón que Producto.php
-// Se encarga de inicializar la conexión mediante Config/Conexion.php e implementar métodos CRUD básicos
+// Proposito: Modelo Eloquent para la tabla actividades, se encarga de inicializar la conexion mediante Config/Conexion.php e implementar metodos CRUD
 
 require_once __DIR__ . '/../vendor/autoload.php'; // Carga las dependencias de Composer (incluye Eloquent)
 require_once __DIR__ . '/../Config/Conexion.php'; // Carga la configuración de conexión a base de datos
 
-Conexion::iniciar(); // Inicializa la conexión global de Eloquent
+Conexion::iniciar(); // Inicializa la conexion global de Eloquent
 
 use Illuminate\Database\Eloquent\Model; // Importa la clase base de Eloquent
 
@@ -18,7 +17,7 @@ class Actividad extends Model
     // Especifica la clave primaria de la tabla
     protected $primaryKey = 'id';
     
-    // Indica que la tabla no tiene campos timestamps (created_at/updated_at)
+    // Indica que la tabla no tiene campos timestamps
     public $timestamps = false;
     
     // Campos que se pueden asignar masivamente al crear/actualizar registros
@@ -33,17 +32,16 @@ class Actividad extends Model
         'producto'
     ];
     
-    // Método para obtener todos los registros ordenados por ID descendente
+    // Metodo para obtener todos los registros ordenados por ID descendente
     public static function obtenerTodos()
     {
-        // Retorna todos los registros de actividades ordenados por id desc
+        // Retorna todos los registros de actividades ordenados descendentes
         return self::orderBy('id', 'desc')->get();
     }
     
-    // Método para obtener un registro por su ID
+    // Metodo para obtener un registro por su ID
     public static function obtenerPorId($id)
     {
-        // Busca y retorna el registro con el ID especificado
         return self::find($id);
     }
     
@@ -57,14 +55,13 @@ class Actividad extends Model
         ->get();
     }
     
-    // Método para crear un nuevo registro
+    // Metodo para crear un nuevo registro
     public static function crear($datos)
     {
-        // Crea y retorna un nuevo registro con los datos proporcionados
         return self::create($datos);
     }
     
-    // Método para actualizar un registro existente
+    // Metodo para actualizar un registro existente
     public static function actualizarRegistro($id, $datos)
     {
         // Busca el registro por ID
@@ -91,11 +88,10 @@ class Actividad extends Model
         return false;
     }
     
-    // Método para insertar múltiples registros de forma masiva (útil para el cargue CSV)
+    // Metodo para insertar multiples registros de forma masiva para la carga de las actividades
     public static function insertarMasivo($arrayDatos)
     {
-        // Usa insert de Eloquent para insertar múltiples registros a la vez
-        // Nota: Este método no activa eventos de Eloquent ni timestamps automáticos
+        // Usa insert de Eloquent para insertar multiples registros a la vez
         return self::insert($arrayDatos);
     }
 }

@@ -1,8 +1,8 @@
 <?php
 // Archivo: Controlador/OfertasControlador.php
-// Propósito: Controlador de ofertas/licitaciones.
-// - Listado con filtros y paginación del lado del servidor.
-// - Creación y edición mediante AJAX (respuestas JSON).
+// Proposito: Controlador de ofertas/licitaciones.
+// - Listado con filtros y paginacion del lado del servidor.
+// - Creacion y edicion mediante AJAX (respuestas JSON).
 // - Vista de detalle consolidada con pestañas.
 
 require_once __DIR__ . '/../Modelo/Ofertas.php';
@@ -12,15 +12,23 @@ class OfertasControlador
 {
     // Valores permitidos para los campos cerrados
     private $monedasPermitidas = array('COP', 'USD', 'EUR');
-    private $estadosPermitidos = array('BORRADOR', 'ACTIVA', 'CERRADA');
+    private $estadosPermitidos = array('ACTIVO', 'PUBLICADA', 'EN_EVALUACION');
+    private $etiquetasEstado = array(
+        'ACTIVO' => 'Activo',
+        'PUBLICADA' => 'Publicada',
+        'EN_EVALUACION' => 'En evaluación'
+    );
 
-    // Tamaño máximo total (en bytes) de todos los archivos enviados en una actualización
+    // Tamaño maximo total en bytes de todos los archivos enviados en una actualizacion
     private $limiteTotalDocumentos = 20971520; // 20 MB
 
-    // Muestra el listado de ofertas con filtros y paginación
+    // Muestra el listado de ofertas con filtros y paginacion
     public function listar()
     {
-        // Filtros enviados por la URL (se conservan al paginar)
+        // Antes de listar, actualiza los estados que dependen de las fechas
+        Ofertas::actualizarEstadosAutomaticos();
+
+        // Filtros enviados por la URL que se conservan al paginar
         $filtros = array(
             'id' => $this->texto($_GET['id'] ?? ''),
             'consecutivo' => $this->texto($_GET['consecutivo'] ?? ''),
@@ -34,7 +42,7 @@ class OfertasControlador
             'fecha_hasta' => $this->texto($_GET['fecha_hasta'] ?? '')
         );
 
-        // Tamaño de página permitido
+        // Tamaño de pagina permitido
         $porPagina = $this->entero($_GET['por_pagina'] ?? 10);
         if (!in_array($porPagina, array(10, 25, 50), true)) {
             $porPagina = 10;
@@ -53,7 +61,7 @@ class OfertasControlador
         $desde = $total > 0 ? (($pagina - 1) * $porPagina) + 1 : 0;
         $hasta = min($total, $pagina * $porPagina);
 
-        // Parámetros para conservar los filtros en los enlaces de paginación
+        // Parametros para conservar los filtros en los enlaces de paginacion
         $parametros = array_merge(
             array('accion' => 'listar'),
             array_filter($filtros, function ($valor) {
@@ -66,10 +74,12 @@ class OfertasControlador
         include __DIR__ . '/../Vista/listar.php';
     }
 
-    // Genera y descarga en Excel el listado completo (sin paginación),
-    // conservando los mismos filtros que trae la URL del listado.
+    // Genera y descarga en Excel el listado filtrado conservando los mismos filtros que trae la URL del listado.
     public function exportarExcel()
     {
+        // Mantiene los estados al dia antes de armar el reporte
+        Ofertas::actualizarEstadosAutomaticos();
+
         $filtros = array(
             'id' => $this->texto($_GET['id'] ?? ''),
             'consecutivo' => $this->texto($_GET['consecutivo'] ?? ''),
@@ -110,7 +120,8 @@ class OfertasControlador
             'fecha_inicio' => '',
             'hora_inicio' => '',
             'fecha_cierre' => '',
-            'hora_cierre' => ''
+            'hora_cierre' => '',
+            'estado' => 'ACTIVO'
         );
 
         $actividadInicial = null;
@@ -122,7 +133,7 @@ class OfertasControlador
         include __DIR__ . '/../Vista/crear.php';
     }
 
-    // Guarda una oferta nueva por AJAX y responde en JSON
+    // Guarda una oferta nueva por AJAX y se responde en JSON
     public function guardarAjax()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -153,11 +164,16 @@ class OfertasControlador
 
             $oferta = Ofertas::crear($datos);
 
+            // Si la oferta ya cumplio la fecha de inicio, el estado se ajusta solo
+            Ofertas::actualizarEstadosAutomaticos();
+            $oferta = Ofertas::obtenerPorId($oferta->id) ?: $oferta;
+
             $this->responderJson(array(
                 'success' => true,
                 'mensaje' => 'La oferta se guardó correctamente.',
                 'id' => $oferta->id,
-                'consecutivo' => $oferta->consecutivo
+                'consecutivo' => $oferta->consecutivo,
+                'estado' => $oferta->estado
             ), 201);
         } catch (Throwable $e) {
             error_log('Error al crear oferta: ' . $e->getMessage());
@@ -168,14 +184,23 @@ class OfertasControlador
         }
     }
 
-    // Muestra el formulario de edición con los datos de la oferta
+    // Muestra el formulario de edicion con los datos de la oferta
     public function editar()
     {
         $id = $this->entero($_GET['id'] ?? 0);
+
+        // Revisa primero si el estado cambio solo por las fechas
+        Ofertas::actualizarEstadosAutomaticos();
         $oferta = Ofertas::obtenerDetalle($id);
 
         if (!$oferta) {
             header('Location: index.php?accion=listar&mensaje=noencontrado');
+            exit;
+        }
+
+        // Solo las ofertas activas se pueden editar
+        if ($oferta->estado !== 'ACTIVO') {
+            header('Location: index.php?accion=detalle&id=' . (int) $oferta->id . '&mensaje=noeditable');
             exit;
         }
 
@@ -189,7 +214,7 @@ class OfertasControlador
             'hora_inicio' => $this->formatearHora($oferta->hora_inicio),
             'fecha_cierre' => $oferta->fecha_cierre,
             'hora_cierre' => $this->formatearHora($oferta->hora_cierre),
-            'estado' => $oferta->estado ?: 'ACTIVA'
+            'estado' => $oferta->estado ?: 'ACTIVO'
         );
 
         $actividadInicial = $oferta->actividad ? array(
@@ -197,7 +222,7 @@ class OfertasControlador
             'producto' => $oferta->actividad->producto
         ) : null;
 
-        // Documentos ya registrados para mostrarlos en la sección de edición
+        // Documentos ya registrados para mostrarlos en la sección de edicion
         $documentosIniciales = array();
         foreach ($oferta->documentos as $documento) {
             $documentosIniciales[] = array(
@@ -229,6 +254,9 @@ class OfertasControlador
         }
 
         $id = $this->entero($_POST['id'] ?? 0);
+
+        // ANTES de guardar, revisa si la oferta ya cambio de estado por fechas
+        Ofertas::actualizarEstadosAutomaticos();
         $oferta = Ofertas::obtenerPorId($id);
 
         if (!$oferta) {
@@ -239,11 +267,20 @@ class OfertasControlador
             return;
         }
 
+        // Solo se permite modificar una oferta mientras este activa
+        if ($oferta->estado !== 'ACTIVO') {
+            $this->responderJson(array(
+                'success' => false,
+                'mensaje' => 'Solo se pueden editar ofertas con estado Activo.'
+            ), 403);
+            return;
+        }
+
         $validacion = $this->validarOferta($_POST);
         $datos = $validacion['datos'];
         $errores = $validacion['errores'];
 
-        // Validación estricta de los documentos enviados desde la sección de edición
+        // Validacion estricta de los documentos enviados desde la seccion de edicion
         $validacionDocumentos = $this->validarDocumentos($id, $_POST, $_FILES);
         $documentosNuevos = $validacionDocumentos['documentos'];
         $documentosReemplazos = $validacionDocumentos['reemplazos'];
@@ -262,7 +299,7 @@ class OfertasControlador
         $reemplazosGuardados = array();
 
         try {
-            // Los archivos se mueven antes de la transacción. Si algo falla, se eliminan.
+            // Los archivos se mueven antes de la transaccion si algo falla se eliminan.
             $documentosGuardados = $this->moverDocumentos($documentosNuevos, $id);
             $reemplazosGuardados = $this->moverDocumentos($documentosReemplazos, $id);
             $datos['actualizado_en'] = date('Y-m-d H:i:s');
@@ -299,7 +336,7 @@ class OfertasControlador
                 }
             });
 
-            // Los archivos anteriores se eliminan solo después de confirmar la transacción
+            // Los archivos anteriores se eliminan solo despues de confirmar la transaccion
             foreach ($reemplazosGuardados as $reemplazo) {
                 try {
                     $this->eliminarArchivoDocumento($reemplazo['archivo_anterior']);
@@ -308,16 +345,21 @@ class OfertasControlador
                 }
             }
 
+            // Si al guardar ya se cumplio alguna fecha, el estado se ajusta solo
+            Ofertas::actualizarEstadosAutomaticos();
+            $oferta = Ofertas::obtenerPorId($id) ?: $oferta;
+
             $this->responderJson(array(
                 'success' => true,
                 'mensaje' => 'La oferta se actualizó correctamente.',
                 'id' => $id,
                 'consecutivo' => $oferta->consecutivo,
+                'estado' => $oferta->estado,
                 'documentos' => count($documentosGuardados),
                 'reemplazos' => count($reemplazosGuardados)
             ), 200);
         } catch (Throwable $e) {
-            // Revierte los archivos físicos nuevos si la transacción no se completó
+            // Revierte los archivos fisicos nuevos si la transaccion no se completo
             $archivosMovidos = array_merge($documentosGuardados, $reemplazosGuardados);
 
             foreach ($archivosMovidos as $documento) {
@@ -338,6 +380,9 @@ class OfertasControlador
     public function detalle()
     {
         $id = $this->entero($_GET['id'] ?? 0);
+
+        // Mantiene el estado al dia antes de mostrar el detalle
+        Ofertas::actualizarEstadosAutomaticos();
         $oferta = Ofertas::obtenerDetalle($id);
 
         if (!$oferta) {
@@ -381,7 +426,7 @@ class OfertasControlador
         $horaInicio = $this->texto($entrada['hora_inicio'] ?? '');
         $fechaCierre = $this->texto($entrada['fecha_cierre'] ?? '');
         $horaCierre = $this->texto($entrada['hora_cierre'] ?? '');
-        $estado = strtoupper($this->texto($entrada['estado'] ?? 'ACTIVA'));
+        $estado = strtoupper($this->texto($entrada['estado'] ?? ''));
 
         // Objeto
         if ($objeto === '') {
@@ -390,7 +435,7 @@ class OfertasControlador
             $errores['objeto'] = 'El objeto debe tener entre 3 y 150 caracteres.';
         }
 
-        // Descripción
+        // Descripcion
         if ($descripcion === '') {
             $errores['descripcion'] = 'La descripción es obligatoria.';
         } elseif (mb_strlen($descripcion, 'UTF-8') > 400) {
@@ -455,8 +500,10 @@ class OfertasControlador
         }
 
         // Estado
-        if (!in_array($estado, $this->estadosPermitidos, true)) {
-            $errores['estado'] = 'Seleccione un estado válido.';
+        if ($estado === '') {
+            $errores['estado'] = 'El estado es obligatorio.';
+        } elseif (!in_array($estado, $this->estadosPermitidos, true)) {
+            $errores['estado'] = 'Seleccione un estado válido: ' . implode(', ', array_values($this->etiquetasEstado)) . '.';
         }
 
         // Normaliza las horas a HH:MM:SS para la base de datos
@@ -479,9 +526,8 @@ class OfertasControlador
         return array('datos' => $datos, 'errores' => $errores);
     }
 
-    // Valida los documentos nuevos y los reemplazos enviados desde la sección de edición.
-    // Exige al menos un documento asociado, que cada archivo sea PDF o ZIP y que
-    // la suma de todos los archivos no supere el límite permitido.
+    // Valida los documentos nuevos y los reemplazos enviados desde la seccion de edicion
+    // Exige al menos un documento, que cada archivo sea PDF o ZIP y que la suma de todos los archivos no supere el limite permitido.
     private function validarDocumentos($ofertaId, $entrada, $archivos)
     {
         $entrada = is_array($entrada) ? $entrada : array();
@@ -522,7 +568,7 @@ class OfertasControlador
             $mensajes[] = 'La información de los documentos no es válida. Intente nuevamente.';
         }
 
-        // Límite total de todos los archivos (nuevos y reemplazos)
+        // Limite total de todos los archivos (nuevos y reemplazos)
         $tamanoTotal = 0;
         foreach (array_merge($listaArchivos, $listaArchivosReemplazo) as $archivo) {
             $tamanoTotal += max(0, (int) ($archivo['size'] ?? 0));
@@ -697,7 +743,7 @@ class OfertasControlador
         return $lista;
     }
 
-    // Mueve los archivos válidos a la carpeta "documentos" de la raíz del proyecto.
+    // Mueve los archivos validos a la carpeta documentos.
     // Sirve tanto para documentos nuevos como para reemplazos.
     private function moverDocumentos($documentos, $ofertaId)
     {
@@ -760,8 +806,8 @@ class OfertasControlador
         return $guardados;
     }
 
-    // Elimina el archivo físico anterior de un documento reemplazado.
-    // Solo actúa sobre archivos almacenados en la carpeta "documentos".
+    // Elimina el archivo fisico anterior de un documento reemplazado
+    // Solo actua sobre archivos almacenados en la carpeta "documentos"
     private function eliminarArchivoDocumento($ruta)
     {
         $ruta = trim((string) $ruta);
@@ -829,7 +875,7 @@ class OfertasControlador
         return substr($hora, 0, 5);
     }
 
-    // Envía una respuesta JSON con el código HTTP indicado
+    // Envia una respuesta JSON con el codigo HTTP indicado
     private function responderJson($datos, $codigo = 200)
     {
         http_response_code($codigo);

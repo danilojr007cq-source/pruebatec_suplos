@@ -1,7 +1,6 @@
 <?php
 // Archivo: Modelo/OfertaDocumento.php
-// Propósito: Modelo Eloquent para los documentos asociados a una oferta/licitación.
-// Se utiliza en la vista de detalle para consolidar la información relacionada.
+// Proposito: Modelo Eloquent para los documentos asociados a una oferta
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../Config/Conexion.php';
@@ -24,7 +23,7 @@ class OfertaDocumento extends Model
         'creado_en'
     ];
 
-    // Relación: un documento pertenece a una oferta/licitación
+    // Relacion: un documento pertenece a una oferta
     public function oferta()
     {
         return $this->belongsTo(Ofertas::class, 'licitacion_id', 'id');

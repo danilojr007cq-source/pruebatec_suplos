@@ -15,7 +15,8 @@ $datosIniciales = $datosIniciales ?? array(
     'fecha_inicio' => '',
     'hora_inicio' => '',
     'fecha_cierre' => '',
-    'hora_cierre' => ''
+    'hora_cierre' => '',
+    'estado' => 'ACTIVO'
 );
 $actividadInicial = $actividadInicial ?? null;
 $esEdicion = false;

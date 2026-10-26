@@ -11,17 +11,6 @@ $e = function ($valor) {
     return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
 };
 
-// Devuelve la clase Bootstrap del badge según el estado
-$claseEstado = function ($estado) {
-    $clases = array(
-        'ACTIVA' => 'success',
-        'CERRADA' => 'secondary',
-        'BORRADOR' => 'warning text-dark'
-    );
-
-    return $clases[$estado] ?? 'light text-dark';
-};
-
 $mensaje = $_GET['mensaje'] ?? '';
 
 // Enlace al reporte Excel: conserva los filtros activos y no incluye la página
@@ -175,18 +164,6 @@ $urlExportar = 'index.php?' . http_build_query($parametrosExportar);
                                 >
                             </div>
                         </th>
-<!--
-                        <th>
-                            <select name="estado" class="form-select form-select-sm">
-                                <option value="">Todos</option>
-                                <?php foreach (array('BORRADOR', 'ACTIVA', 'CERRADA') as $estado): ?>
-                                    <option value="<?= $estado ?>" <?= $filtros['estado'] === $estado ? 'selected' : '' ?>>
-                                        <?= $estado ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </th>
--->
                         <th class="text-center text-muted">
                             <div class="d-flex gap-1">
                                 <input
@@ -233,17 +210,6 @@ $urlExportar = 'index.php?' . http_build_query($parametrosExportar);
                                 <td>
                                     <?= $oferta->fecha_cierre ? $e(date('d/m/Y', strtotime($oferta->fecha_cierre))) : '—' ?>
                                 </td>
-<!--
-                                <td>
-                                    <?php if ($oferta->estado): ?>
-                                        <span class="badge bg-<?= $claseEstado($oferta->estado) ?>">
-                                            <?= $e($oferta->estado) ?>
-                                        </span>
-                                    <?php else: ?>
-                                        —
-                                    <?php endif; ?>
-                                </td>
--->
                                 <td>
                                     <div class="d-flex gap-1">
                                         <a

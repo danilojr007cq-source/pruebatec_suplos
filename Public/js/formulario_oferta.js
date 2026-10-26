@@ -41,7 +41,8 @@
                 fecha_inicio: datosIniciales.fecha_inicio || '',
                 hora_inicio: datosIniciales.hora_inicio || '',
                 fecha_cierre: datosIniciales.fecha_cierre || '',
-                hora_cierre: datosIniciales.hora_cierre || ''
+                hora_cierre: datosIniciales.hora_cierre || '',
+                estado: datosIniciales.estado || 'ACTIVO'
             });
 
             const errores = ref({});
@@ -558,6 +559,10 @@
                     if (cierre <= inicio) {
                         nuevosErrores.fecha_cierre = 'La fecha y hora de cierre debe ser posterior a la fecha y hora de inicio.';
                     }
+                }
+
+                if (!['ACTIVO', 'PUBLICADA', 'EN_EVALUACION'].includes(form.estado)) {
+                    nuevosErrores.estado = 'Seleccione un estado válido: Activo, Publicada o En evaluación.';
                 }
 
                 // Validación de la sección de documentos (solo en edición)

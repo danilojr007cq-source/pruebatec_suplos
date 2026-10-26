@@ -13,6 +13,7 @@ Está hecha con **PHP nativo**, **Eloquent ORM**, **Vue.js 3** y **Bootstrap 5**
 ## ¿Qué hace?
 
 - **CRUD de ofertas**: crear, listar, editar, ver detalle y eliminar.
+- **Estado de la oferta**: Activo, Publicada y En evaluación, con cambio automático según las fechas y edición limitada a las ofertas activas.
 - **Listado con filtros** por consecutivo, objeto, descripción, moneda, actividad, presupuesto y fechas, con paginación del lado del servidor.
 - **Detalle en pestañas**: información general, actividad, cronograma, documentos y auditoría.
 - **Documentos adjuntos**: carga de archivos PDF o ZIP asociados a cada oferta, con opción de reemplazarlos o eliminarlos.
@@ -33,7 +34,7 @@ Está hecha con **PHP nativo**, **Eloquent ORM**, **Vue.js 3** y **Bootstrap 5**
 
 ## Requisitos
 
-Antes de arrancar, necesitas tener instalado:
+Para comenzar, necesitas tener instalado:
 
 - **PHP 8.1 o superior** con las extensiones:
   - `pdo_mysql`
@@ -92,7 +93,7 @@ Edita `Config/Conexion.php` y ajusta tus credenciales:
 'password' => '',
 ```
 
-Si tu MySQL tiene contraseña, cámbiala ahí. Y si vas a publicar el proyecto, no subas credenciales reales al repositorio. 😉
+Ajuste las credenciales de la BD a su conveniencia.
 
 ### 5. Permisos para los documentos
 
@@ -185,7 +186,8 @@ pruebatec_suplos/
 
 ## Notas
 
-- Es un proyecto de prueba técnica, pensado para correr en local. **No tiene autenticación ni protección CSRF**; para un entorno real habría que agregarlas.
+- El estado de una oferta se mueve solo: nace en **Activo**, pasa a **Publicada** cuando llega la fecha de inicio y a **En evaluación** cuando llega la fecha de cierre. Solo se puede editar mientras siga en **Activo**.
+- Es un proyecto de prueba técnica, pensado para correr en local.
 - La subida de documentos acepta únicamente `.pdf` y `.zip`, con un límite total de 20 MB por actualización.
 - Las dependencias de frontend (Vue y Bootstrap) vienen por CDN, así que sin internet la interfaz no se verá bien.
 - Si algo falla al generar el Excel, revisa que la extensión `zip` de PHP esté habilitada.

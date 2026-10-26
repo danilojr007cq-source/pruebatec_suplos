@@ -112,8 +112,4 @@ Abrir: `http://localhost:8000/`
 - [Módulo de ofertas: AJAX, listado, filtros, paginación y detalle](DOCUMENTACION_OFERTAS.md)
 - [Módulo de actividades: carga desde CSV y autocompletado AJAX](DOCUMENTACION_ACTIVIDADES.md)
 
-## Notas
 
-- Los archivos `ProductoControlador.php` y `Producto.php` pertenecen a la práctica inicial y ya no tienen rutas activas en `index.php`.
-- La subida de documentos a `ofertas_documentos` no está implementada; la vista de detalle solo muestra los documentos existentes.
-- No hay autenticación ni protección CSRF porque el proyecto es una práctica local sin sesiones. Para un entorno real se recomienda agregarlas.
