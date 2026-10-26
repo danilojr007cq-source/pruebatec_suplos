@@ -62,16 +62,7 @@ CREATE TABLE `ofertas` (
   `actualizado_en` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
---
--- Volcado de datos para la tabla `ofertas`
---
 
-INSERT INTO `ofertas` (`id`, `consecutivo`, `objeto`, `descripcion`, `moneda`, `presupuesto`, `actividad_id`, `fecha_inicio`, `hora_inicio`, `fecha_cierre`, `hora_cierre`, `estado`, `creado_en`, `actualizado_en`) VALUES
-(14, 'O-014-26', 'licitación Danilo', 'Esto es una prueba', 'COP', '15000000.00', 289335, '2026-10-26', '07:13:00', '2026-10-26', '10:13:00', 'EN_EVALUACION', '2026-10-26 07:15:02', '2026-10-26 19:26:42'),
-(28, 'O-028-26', 'Prueba estado temporal', 'Oferta temporal para validar el campo estado', 'COP', '1000000.00', 245112, '2026-10-25', '08:00:00', '2026-10-27', '18:00:00', 'PUBLICADA', '2026-10-26 19:27:22', '2026-10-26 19:30:38'),
-(29, 'O-029-26', 'prueba', 'prueba', 'COP', '170000.00', 289335, '2026-10-26', '13:36:00', '2026-10-26', '17:39:00', 'EN_EVALUACION', '2026-10-26 19:35:51', '2026-10-26 19:35:51');
-
--- --------------------------------------------------------
 
 --
 -- Estructura de tabla para la tabla `ofertas_documentos`
@@ -86,13 +77,6 @@ CREATE TABLE `ofertas_documentos` (
   `creado_en` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Volcado de datos para la tabla `ofertas_documentos`
---
-
-INSERT INTO `ofertas_documentos` (`id`, `licitacion_id`, `titulo`, `descripcion`, `archivo`, `creado_en`) VALUES
-(4, 14, 'prueba_danilo', 'esto es una prueba', 'documentos/oferta_14_20261026082458_Hoja_de_vida_Danilo_60a059d7.pdf', '2026-10-26 08:24:58'),
-(5, 28, 'Documento temporal', 'Prueba', 'documentos/dummy.pdf', '2026-10-26 13:27:29');
 
 --
 -- Índices para tablas volcadas
