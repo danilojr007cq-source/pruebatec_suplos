@@ -1,0 +1,14 @@
+{
+    "name": "pruebatec_suplos/crud-eloquent",
+    "description": "CRUD sencillo con PHP nativo, MVC en español, Eloquent ORM",
+    "type": "project",
+    "require": {
+        "illuminate/database": "^10.0",
+        "illuminate/events": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "./"
+        }
+    }
+}

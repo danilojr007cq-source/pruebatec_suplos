@@ -1,0 +1,7 @@
+Estado- Se menciona en las columnas de BD que debe tener la tabla pero no se menciona en ningún formulario y se vuelve a mencionar  para la vista de listar pero no se sabe que tipo de campo o si tiene opciones
+
+Yo no utilice vue como un framework, mas bien como una libreria y pues creería que así también me la aceptaran pero queria validarlo con ustedes.
+
+Se habla de CRUD pero en el archivo no se menciona el eliminar de un registro, verdaderamente no tiene que ir o por que implicitamente diga que es un crud lo debe llevar aunque no se mencione ? 
+
+La carga del archivo adjunto en el editar no tiene un limite de peso establecido, pero quisiera validar si se puede poner alguno ? 
