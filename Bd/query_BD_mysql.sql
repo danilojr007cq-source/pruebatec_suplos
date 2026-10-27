@@ -47,7 +47,7 @@ CREATE TABLE `actividades` (
 
 CREATE TABLE `ofertas` (
   `id` int(11) NOT NULL,
-  `consecutivo` varchar(255) NOT NULL,
+  `consecutivo` varchar(255),
   `objeto` varchar(150) DEFAULT NULL,
   `descripcion` varchar(400) DEFAULT NULL,
   `moneda` varchar(3) DEFAULT NULL,
